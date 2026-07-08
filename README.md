@@ -60,7 +60,7 @@ from the **Actions** tab (`workflow_dispatch`). On each run it:
 The `data/catalog.json` file is publicly readable at:
 
 ```
-https://raw.githubusercontent.com/<your-username>/<this-repo>/main/data/catalog.json
+https://raw.githubusercontent.com/AlexandreMns/Scraper/main/data/catalog.json
 ```
 
 ## Notes
