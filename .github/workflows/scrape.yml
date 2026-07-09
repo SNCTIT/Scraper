@@ -30,7 +30,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run scraper
-        run: node scrape.js
+        run: node scraper.js
 
       - name: Commit updated catalog.json
         run: |
