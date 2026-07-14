@@ -29,8 +29,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run scraper
-        run: node scraper.js
+      - name: Run scrapers
+        run: |
+            node scraper.js
+            node scraper-pages.js
 
       - name: Commit updated catalog.json
         run: |
