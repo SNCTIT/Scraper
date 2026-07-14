@@ -1,8 +1,18 @@
+// scrape-pages.js
+//
+// Pulls all published Pages (and optionally Posts) from the SNCT WordPress
+// site via its native REST API, in all three languages (Polylang), strips
+// the HTML down to plain text, and merges the result into the same
+// data/catalog.json already produced by scraper.js — so the WordPress
+// plugin only ever needs to sync from one URL.
+//
+// Usage: node scrape-pages.js
+
 import fs from "fs";
 import crypto from "crypto";
 
 const SITE = "https://snct.lu";
-const POST_TYPES = ["pages"];
+const POST_TYPES = ["pages"]; // add "posts" here too if the site has a blog you want included
 const OUTPUT_PATH = "./data/catalog.json";
 
 // Slugs to skip entirely (test pages, drafts left public, interactive
@@ -10,9 +20,21 @@ const OUTPUT_PATH = "./data/catalog.json";
 // of the URL, e.g. "test" for https://snct.lu/de/test/
 const EXCLUDE_SLUGS = [
   "test",
+  // Interactive map widgets — their real content (addresses) loads via
+  // JavaScript/AJAX after page load, so the REST API only returns UI
+  // chrome (buttons, "Loading...", filters) with no useful information.
+  // The plain-list address pages below cover the same information as
+  // real text instead.
   "addresses-and-opening-hours-map",
   "adressen-und-offnungszeiten-map",
   "adresses-et-horaires-map",
+  // Full sanctions catalog pages — this is the entire regulation
+  // nomenclature as one giant block of text per language. It's already
+  // covered, far more usefully, by the granular entries from scraper.js
+  // (one row per defect). Including it here duplicates that data AND
+  // is large enough to exceed the embeddings API's per-input token
+  // limit (~8,191 tokens), which can cause the whole embedding request
+  // to fail.
   "catalog-of-sanctions",
   "katalog-der-sanktionspunkte",
   "catalogue-des-sanctions",
@@ -29,6 +51,26 @@ function stripHtml(html) {
     .replace(/&#8220;|&#8221;/g, '"')
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Removes hardcoded "prices in force as of <date>" boilerplate that the site
+// embeds directly in the page text (not tied to WordPress's own "last
+// modified" date, so it silently goes stale whenever prices change without
+// someone remembering to also edit this sentence). We strip it entirely
+// rather than trust it, since the chatbot should never surface a possibly
+// wrong date — the system prompt also has a backup instruction for this,
+// but removing it at the source is the reliable fix.
+function stripStaleDateStamps(text) {
+  const patterns = [
+    /PRICES IN FORCE on \d{1,2}\s+[A-Z]+\s+\d{4}\s+AT SNCT VEHICLE INSPECTION STATIONS/gi,
+    /PR[EÉ]IS?E?\s*G[ÜU]LTIG\s+ab\s+dem\s+\d{1,2}\.?\s*[A-ZÄÖÜ]+\s+\d{4}\s+IN\s+DEN\s+PR[ÜU]FSTELLEN\s+DER\s+SNCT/gi,
+    /PRIX APPLICABLES au \d{1,2}\s+[A-ZÉÈÀ]+\s+\d{4}\s+DANS LES STATIONS DE CONTR[ÔO]LE TECHNIQUE SNCT/gi,
+  ];
+  let cleaned = text;
+  for (const pattern of patterns) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 
 function detectLanguageFromUrl(link) {
@@ -55,6 +97,8 @@ async function fetchAllForType(type) {
     const res = await fetch(url);
 
     if (!res.ok) {
+      // WordPress returns 400 once you page past the last page — that's
+      // the normal "no more results" signal, not a real error.
       break;
     }
 
@@ -65,7 +109,9 @@ async function fetchAllForType(type) {
       if (EXCLUDE_SLUGS.includes(item.slug)) continue;
 
       const title = stripHtml(item.title?.rendered || "");
-      const content = stripHtml(item.content?.rendered || "");
+      const content = stripStaleDateStamps(
+        stripHtml(item.content?.rendered || ""),
+      );
       if (!content) continue;
 
       const lang = detectLanguageFromUrl(item.link);
@@ -100,11 +146,15 @@ async function main() {
     siteContent = siteContent.concat(items);
   }
 
+  // Merge with whatever scraper.js already produced (the sanctions
+  // catalog), keyed by id so re-running this never creates duplicates.
   let existing = [];
   if (fs.existsSync(OUTPUT_PATH)) {
     existing = JSON.parse(fs.readFileSync(OUTPUT_PATH, "utf-8"));
   }
 
+  // Drop any previously-saved site content whose id no longer
+  // appears (page deleted/unpublished since last run).
   const currentSiteIds = new Set(siteContent.map((entry) => entry.id));
   const keptExisting = existing.filter((entry) =>
     entry.type !== "page" && entry.type !== "post"
