@@ -20,6 +20,7 @@ content:
 ## What each script does
 
 ### `scraper.js` (sanctions catalog)
+
 - Uses [Playwright](https://playwright.dev/) to load the catalog pages and
   expand any accordion/table sections that require JS interaction.
 - Parses the resulting HTML with [Cheerio](https://cheerio.js.org/) to extract
@@ -27,6 +28,7 @@ content:
 - Writes to `data/catalog.json`.
 
 ### `scrape-pages.js` (general site content)
+
 - Fetches every published **Page** from `snct.lu`'s WordPress REST API
   (`/wp-json/wp/v2/pages`), across all three languages.
 - Detects the language from the URL prefix (`/en/` → English, `/de/` → German,
@@ -76,6 +78,7 @@ before committing, so the file reflects both sources).
 `data/catalog.json` is a single array mixing two entry shapes:
 
 **Sanctions catalog entries** (from `scraper.js`):
+
 ```json
 {
   "id": "a1b2c3d4e5f6...",
@@ -87,6 +90,7 @@ before committing, so the file reflects both sources).
 ```
 
 **Site page entries** (from `scrape-pages.js`):
+
 ```json
 {
   "id": "3ea67b53f5a3bdd3b2d002d47a8786a4",
@@ -129,15 +133,3 @@ Paste this URL into the WordPress AI Chatbot plugin's "Catalog URL" setting
 to enable automatic RAG sync. The plugin's "ID field" and "Content field"
 settings should be `id` and `description` respectively, matching the output
 format above.
-
-## Notes
-
-- This repository should stay **public** (or the consuming plugin needs an
-  authenticated fetch) so the raw JSON URL is reachable without credentials.
-- Scraping frequency should be reasonable — avoid overly aggressive schedules
-  that could put unnecessary load on snct.lu.
-- If new stale/boilerplate text patterns are found on the site in the future
-  (similar to the date-stamp issue above), add a regex for them to
-  `stripStaleDateStamps()` in `scrape-pages.js` rather than relying solely on
-  prompt instructions in the plugin to work around them — cleaning at the
-  source is more reliable.
