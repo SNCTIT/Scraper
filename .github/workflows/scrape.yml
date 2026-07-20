@@ -2,9 +2,9 @@ name: Scrape SNCT catalog
 
 on:
   schedule:
-    # Runs at minute 0 of every hour. Adjust as needed (GitHub Actions
-    # schedules use UTC time, and can be delayed a few minutes at busy times).
-    - cron: "0 * * * *"
+    # Runs once a day at 03:00 UTC. GitHub Actions schedules use UTC and can
+    # be delayed a few minutes at busy times.
+    - cron: "0 3 * * *"
   workflow_dispatch: {} # lets you trigger it manually from the Actions tab
 
 # Needed so the workflow can push the updated catalog.json back to the repo.
@@ -31,8 +31,8 @@ jobs:
 
       - name: Run scrapers
         run: |
-            node scraper.js
-            node scraper-pages.js
+          node scraper.js
+          node scrape-pages.js
 
       - name: Commit updated catalog.json
         run: |
