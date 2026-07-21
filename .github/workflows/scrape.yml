@@ -32,7 +32,7 @@ jobs:
       - name: Run scrapers
         run: |
           node scraper.js
-          node scrape-pages.js
+          node scraper-pages.js
 
       - name: Upload debug artifacts on failure
         if: failure()
