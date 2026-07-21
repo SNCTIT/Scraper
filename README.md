@@ -12,7 +12,7 @@ content:
 - **`scraper.js`** — the sanctions/defects catalog (the technical inspection
   point-by-point nomenclature), scraped from the site's accordion/table UI
   using a headless browser.
-- **`scrape-pages.js`** — all other static pages on the site (prices, FAQ,
+- **`scraper-pages.js`** — all other static pages on the site (prices, FAQ,
   checklist, contact, careers, legal pages, etc.), pulled directly from
   WordPress's built-in REST API — no browser needed for this part, since it's
   just structured JSON straight from the CMS.
@@ -66,11 +66,11 @@ content:
 npm install
 npx playwright install chromium
 node scraper.js
-node scrape-pages.js
+node scraper-pages.js
 ```
 
 Output is written to `data/catalog.json` (both scripts write to/merge into
-the same file — always run `scraper.js` before `scrape-pages.js`, or run both
+the same file — always run `scraper.js` before `scraper-pages.js`, or run both
 before committing, so the file reflects both sources).
 
 ## Output format
